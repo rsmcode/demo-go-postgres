@@ -10,3 +10,12 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# generated executable
+demo-go-postgres
+
+# sqlite file
+storage.db
+
+# ignore vendor file
+/vendor

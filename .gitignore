@@ -17,5 +17,6 @@ demo-go-postgres
 # sqlite file
 storage.db
 
-# ignore vendor file
-/vendor
+# ignored folders
+vendor/
+.vscode/

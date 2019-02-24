@@ -1,86 +1,49 @@
 package models
 
 import (
-	"database/sql"
+	"fmt"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/go-pg/pg"
 )
 
-// Task is a struct containing Task data
+// Task blob schema
 type Task struct {
 	ID   int    `json:"id"`
-	Name string `json:"name"`
-}
-
-// TaskCollection is collection of Tasks
-type TaskCollection struct {
-	Tasks []Task `json:"items"`
+	Name string `sql:",notnull" json:"name"`
 }
 
 // GetTasks from the DB
-func GetTasks(db *sql.DB) TaskCollection {
-	sql := "SELECT * FROM tasks"
-	rows, err := db.Query(sql)
-	// Exit if the SQL doesn't work for some reason
+func GetTasks(db *pg.DB) []Task {
+	tasks := []Task{}
+	err := db.Model(&tasks).Select()
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
-	// make sure to cleanup when the program exits
-	defer rows.Close()
-
-	result := TaskCollection{}
-	for rows.Next() {
-		task := Task{}
-		err2 := rows.Scan(&task.ID, &task.Name)
-		// Exit if we get an error
-		if err2 != nil {
-			panic(err2)
-		}
-		result.Tasks = append(result.Tasks, task)
-	}
-	return result
+	return tasks
 }
 
 // PutTask into DB
-func PutTask(db *sql.DB, name string) (int64, error) {
-	sql := "INSERT INTO tasks(name) VALUES(?)"
-
-	// Create a prepared SQL statement
-	stmt, err := db.Prepare(sql)
-	// Exit if we get an error
+func PutTask(db *pg.DB, name string) (int, error) {
+	Name := &Task{
+		Name: name,
+	}
+	err := db.Insert(Name)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
-	// Make sure to cleanup after the program exits
-	defer stmt.Close()
-
-	// Replace the '?' in our prepared statement with 'name'
-	result, err2 := stmt.Exec(name)
-	// Exit if we get an error
-	if err2 != nil {
-		panic(err2)
-	}
-
-	return result.LastInsertId()
+	return Name.ID, nil
 }
 
 // DeleteTask from DB
-func DeleteTask(db *sql.DB, id int) (int64, error) {
-	sql := "DELETE FROM tasks WHERE id = ?"
+func DeleteTask(db *pg.DB, id int) (int, error) {
 
-	// Create a prepared SQL statement
-	stmt, err := db.Prepare(sql)
-	// Exit if we get an error
+	idToDelete := &Task{
+		ID: id,
+	}
+
+	err := db.Delete(idToDelete)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
-
-	// Replace the '?' in our prepared statement with 'id'
-	result, err2 := stmt.Exec(id)
-	// Exit if we get an error
-	if err2 != nil {
-		panic(err2)
-	}
-
-	return result.RowsAffected()
+	return id, nil
 }

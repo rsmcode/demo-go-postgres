@@ -61,7 +61,7 @@
                 created: function() {
                     // Use the vue-resource $http client to fetch data from the /tasks route
                     this.$http.get('/tasks').then(function(response) {
-                        this.tasks = response.data.items ? response.data.items : []
+                        this.tasks = response.data  ? response.data  : []
                     })
                 },
 
@@ -87,8 +87,8 @@
                     deleteTask: function(index) {
                         // Use the $http client to delete a task by its id
                         this.$http.delete('/tasks/' + this.tasks[index].id).success(function(response) {
-                            this.tasks.splice(index, 1)
                             console.log("Task deleted!")
+                            this.tasks.splice(index, 1)
                         }).error(function(error) {
                             console.log(error)
                         })

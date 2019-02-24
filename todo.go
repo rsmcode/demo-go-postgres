@@ -1,19 +1,22 @@
 package main
 
 import (
-	"database/sql"
+	"fmt"
 
 	"demo-go-postgres/handlers"
 
+	"github.com/go-pg/pg"
+
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/engine/standard"
-	_ "github.com/mattn/go-sqlite3"
 )
 
-func main() {
+// For displaying the generated SQL in the command-line.
+type dbLogger struct{}
 
-	db := initDB("storage.db")
-	migrate(db)
+func main() {
+	db := initDB()
+	defer db.Close()
 
 	e := echo.New()
 
@@ -22,36 +25,39 @@ func main() {
 	e.PUT("/tasks", handlers.PutTask(db))
 	e.DELETE("/tasks/:id", handlers.DeleteTask(db))
 
-	e.Run(standard.New(":8000"))
+	port := ":8000"
+	fmt.Print("App running at http://localhost", port)
+	e.Run(standard.New(port))
 }
 
-func initDB(filepath string) *sql.DB {
-	db, err := sql.Open("sqlite3", filepath)
-
-	// Here we check for any db errors then exit
+func initDB() *pg.DB {
+	options := &pg.Options{
+		User:     "logan",
+		Password: "xmen",
+		Database: "marvel",
+	}
+	db := pg.Connect(options)
+	db.AddQueryHook(dbLogger{})
+	err := migrate(db)
 	if err != nil {
 		panic(err)
-	}
-
-	// If we don't get any errors but somehow still don't get a db connection
-	// we exit as well
-	if db == nil {
-		panic("db nil")
 	}
 	return db
 }
 
-func migrate(db *sql.DB) {
-	sql := `
-	CREATE TABLE IF NOT EXISTS tasks(
-		id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-		name VARCHAR NOT NULL
-	);
-	`
+// Create the table
+func migrate(db *pg.DB) error {
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS Tasks(id BIGSERIAL PRIMARY KEY, name text)`)
 
-	_, err := db.Exec(sql)
-	// Exit if something goes wrong with our SQL statement above
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
+}
+
+func (d dbLogger) BeforeQuery(q *pg.QueryEvent) {}
+
+// Show the generated SQL in the command-line.
+func (d dbLogger) AfterQuery(q *pg.QueryEvent) {
+	fmt.Println(q.FormattedQuery())
 }
